@@ -86,11 +86,19 @@ export default function (pi: ExtensionAPI) {
 				} else if (config.targets.length === 1) {
 					target = config.targets[0];
 				} else if (ctx.hasUI) {
-					const choice = await ctx.ui.select(
-						"Which target?",
-						config.targets.map((t) => targetLabel(t.path)),
-					);
+					const options = [...config.targets.map((t) => targetLabel(t.path)), "All targets"];
+					const choice = await ctx.ui.select("Which target?", options);
 					if (choice === undefined || choice === null) return;
+					if (choice === "All targets") {
+						const notify: NotifyFn = (msg, level) => ctx.ui.notify(msg, level);
+						const history = loadHistory();
+						for (const t of config.targets) {
+							const run = await runReflection(t, modelRegistryRef, notify, undefined, {});
+							if (run) history.push(run);
+						}
+						saveHistory(history);
+						return;
+					}
 					const chosenTarget = config.targets.find((t) => targetLabel(t.path) === choice);
 					if (!chosenTarget) return;
 					target = chosenTarget;
